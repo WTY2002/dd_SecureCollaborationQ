@@ -101,7 +101,8 @@ int main()
 
     char* fileString = "/root/wty/rawData.txt";
     char* query = "/root/wty/query.txt";
-    char* res = "/root/wty/result.txt";
+    // char* res = "/root/wty/result.txt";
+    char* res = "/root/wty/ttt.txt";
 
     clock_t start1 = clock();
     dealData(fileString);
@@ -110,6 +111,10 @@ int main()
     clock_t start2 = clock();
     secureCollaborationQ(query, res);
     printTime(start2,"查询");
+
+
+    // 清理 rawData
+    cleanupRawData();
 
     readFile(res);
 

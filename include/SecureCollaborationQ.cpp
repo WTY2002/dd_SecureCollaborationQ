@@ -11,6 +11,11 @@
 #include <fstream>
 #include <queue>
 #include <openssl/bn.h>
+#ifdef _WIN32
+#define EXPORT_SYMBOL __declspec(dllexport)
+#else
+#define EXPORT_SYMBOL __attribute__((visibility("default")))
+#endif
 using namespace std;
 
 // 原始数据集
@@ -118,7 +123,7 @@ vector<BIGNUM*> readBIGNUMsFromFile(char* filename, int lineNumber) {
  * @Method: 读取数据集
  * @param char* fileString 读取数据集的地址
  */
-void dealData(char* fileString) {
+EXPORT_SYMBOL void dealData(char* fileString) {
     vector<vector<BIGNUM*>> data = readBIGNUMsFromFile(fileString);
 
     rawData.resize(numUsers);
@@ -139,33 +144,6 @@ void dealData(char* fileString) {
         }
         rawData[i] = t;
     }
-
-
-    // // 输出data
-    // cout << "Data: " << endl;
-    //
-    // for (int i = 0; i < data.size(); ++i) {
-    //     for (int j = 0; j < data[i].size(); ++j) {
-    //         cout << BN_bn2dec(data[i][j]) << " ";
-    //     }
-    //     cout << endl;
-    // }
-    // cout << "-------------" << endl;
-    //
-    // // 输出rawData
-    //
-    // for (int i = 0; i < rawData.size(); ++i) {
-    //     cout << "User " << i << ": " << endl;
-    //
-    //     for (int j = 0; j < rawData[i].size(); ++j) {
-    //         for (int k = 0; k < rawData[i][j].size(); ++k) {
-    //             cout << BN_bn2dec(rawData[i][j][k]) << " ";
-    //         }
-    //         cout << endl;
-    //     }
-    //     cout << endl;
-    // }
-
 }
 
 /**
@@ -174,7 +152,7 @@ void dealData(char* fileString) {
  * @param resultFilePath 输出数据的地址
  * @return 状态码，1：成功；0：失败
  */
-int secureCollaborationQ(char* fileString, char* resultFilePath) {
+EXPORT_SYMBOL int secureCollaborationQ(char* fileString, char* resultFilePath) {
     // 读取两行数据，第一行含有一个数据k；第二行为数据集y中的一个数据，空格分隔
     vector<vector<BIGNUM*>> data_list(2);
     data_list[0] = readBIGNUMsFromFile(fileString, 1);
@@ -210,24 +188,11 @@ int secureCollaborationQ(char* fileString, char* resultFilePath) {
             }
         }
 
-        cout << "第" << i << "个用户计算k临近";
+        //cout << "第" << i << "个用户计算k临近";
         printTime(start,"");
 
         heapNodes[i] = q;
     }
-
-    // // 输出heapNodes
-    // for (int i = 0; i < heapNodes.size(); ++i) {
-    //     cout << "User " << i << ": " << endl;
-    //     while (!heapNodes[i].empty()) {
-    //         for (int l = 0; l < rawData[i][heapNodes[i].top().index2].size(); ++l) {
-    //             cout << BN_bn2dec(rawData[i][heapNodes[i].top().index2][l]) << " ";
-    //         }
-    //         cout << "index = " << heapNodes[i].top().index2 << endl;
-    //         heapNodes[i].pop();
-    //     }
-    //     cout << endl;
-    // }
 
     // 合并每个最大堆
     priority_queue<HeapNode> mergedHeap;
@@ -264,19 +229,25 @@ int secureCollaborationQ(char* fileString, char* resultFilePath) {
         return 0;
     }
 
+    // 释放 data_list 中的 BIGNUM 对象
+    for (auto& bn : data_list[0]) {
+        BN_free(bn);
+    }
+    for (auto& bn : data_list[1]) {
+        BN_free(bn);
+    }
+
     return 1;
+}
 
-    // while (!mergedHeap.empty()) {
-    //     cout << "User " << mergedHeap.top().index1 << ", index = " << mergedHeap.top().index2 << endl;
-    //     cout << "distence = " << BN_bn2dec(mergedHeap.top().distence) << endl;
-    //     mergedHeap.pop();
-    // }
-
-    // // 输出mergedHeap
-    // while (!mergedHeap.empty()) {
-    //     cout << "User " << mergedHeap.top().index1 << ", index = " << mergedHeap.top().index2 << endl;
-    //     cout << "distence = " << BN_bn2dec(mergedHeap.top().distence) << endl;
-    //     mergedHeap.pop();
-    // }
-
+// 清理函数，用于释放 rawData 中的 BIGNUM 对象的内存
+void cleanupRawData() {
+    for (auto& user : rawData) {
+        for (auto& vec : user) {
+            for (auto& bn : vec) {
+                BN_free(bn);
+            }
+        }
+    }
+    rawData.clear();
 }

@@ -1,0 +1,13 @@
+# ninja log v5
+1	513	7427436672025387	CMakeFiles/SecureCollaborationQ.dir/include/SecureCollaborationQ.cpp.obj	b5e5cb7c55614189
+525	1303	7427436672025387	SecureCollaborationQ.dll	7cdcb54db6d4b949
+525	1303	7427436672025387	SecureCollaborationQ.lib	7cdcb54db6d4b949
+0	468	7427441749570514	CMakeFiles/SecureCollaborationQ.dir/include/SecureCollaborationQ.cpp.obj	b5e5cb7c55614189
+471	660	7427441749570514	SecureCollaborationQ.dll	7cdcb54db6d4b949
+471	660	7427441749570514	SecureCollaborationQ.lib	7cdcb54db6d4b949
+1	382	7427454785923854	CMakeFiles/SecureCollaborationQ.dir/include/SecureCollaborationQ.cpp.obj	b5e5cb7c55614189
+385	895	7427454789595691	SecureCollaborationQ.dll	7cdcb54db6d4b949
+385	895	7427454789595691	SecureCollaborationQ.lib	7cdcb54db6d4b949
+1	362	7427455247938869	CMakeFiles/SecureCollaborationQ.dir/include/SecureCollaborationQ.cpp.obj	b5e5cb7c55614189
+364	537	7427455247938869	SecureCollaborationQ.dll	7cdcb54db6d4b949
+364	537	7427455247938869	SecureCollaborationQ.lib	7cdcb54db6d4b949
