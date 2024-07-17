@@ -168,7 +168,7 @@ EXPORT_SYMBOL int secureCollaborationQ(char* fileString, char* resultFilePath) {
     //将以下代码按照numUsers的值开启多进程进行计算
     for (int i = 0; i < numUsers; ++i) {
 
-        clock_t start = clock();
+        //clock_t start = clock();
 
         priority_queue<HeapNode> q;
         // 维护每个用户的前k个最小距离
@@ -189,7 +189,7 @@ EXPORT_SYMBOL int secureCollaborationQ(char* fileString, char* resultFilePath) {
         }
 
         //cout << "第" << i << "个用户计算k临近";
-        printTime(start,"");
+        //printTime(start,"");
 
         heapNodes[i] = q;
     }
@@ -240,8 +240,10 @@ EXPORT_SYMBOL int secureCollaborationQ(char* fileString, char* resultFilePath) {
     return 1;
 }
 
-// 清理函数，用于释放 rawData 中的 BIGNUM 对象的内存
-void cleanupRawData() {
+/**
+     * @Method: 清理函数，用于释放 rawData 中的 BIGNUM 对象的内存
+     */
+EXPORT_SYMBOL void cleanupRawData() {
     for (auto& user : rawData) {
         for (auto& vec : user) {
             for (auto& bn : vec) {

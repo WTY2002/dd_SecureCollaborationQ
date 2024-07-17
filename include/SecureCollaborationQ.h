@@ -38,13 +38,13 @@ extern "C" {
 	 */
 	EXPORT_SYMBOL int secureCollaborationQ(char* fileString, char* resultFilePath);
 
+	/**
+	 * @Method: 清理函数，用于释放 rawData 中的 BIGNUM 对象的内存
+	 */
+	EXPORT_SYMBOL void cleanupRawData();
+
 #ifdef __cplusplus
 }
 #endif
-
-// 清理函数，用于释放 rawData 中的 BIGNUM 对象的内存
-void cleanupRawData();
-
-
 
 #endif //SECURECOLLABORATIONQ_H
