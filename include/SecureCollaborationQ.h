@@ -19,8 +19,9 @@ void printTime(clock_t start_time,char * desc);
 /**
  * @Method: 读取数据集
  * @param char* fileString 读取数据集的地址
+ * @return 状态码，1：成功；0：失败
  */
-void dealData(char* fileString);
+int dealData(char* fileString);
 
 
 /**
@@ -30,6 +31,13 @@ void dealData(char* fileString);
  * @return 状态码，1：成功；0：失败
  */
 int secureCollaborationQ(char* fileString, char* resultFilePath);
+
+
+/**
+ * @Method: 清理函数，用于释放 rawData 中的 BIGNUM 对象的内存
+ * @return 状态码，1：成功；0：失败
+ */
+int cleanupRawData();
 
 
 

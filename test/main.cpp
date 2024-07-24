@@ -12,7 +12,9 @@
 #include <openssl/crypto.h>
 #include <mutex>
 #include <sys/wait.h>
-using namespace std;
+
+#include <chrono>
+using namespace std::chrono;
 
 
 vector<vector<BIGNUM*>> readBIGNUMsFromFile111(char* filename) {
@@ -91,27 +93,82 @@ void readFile(char* fileString) {
         }
         cout << endl;
     }
+    cout << endl;
 }
 
-int main()
-{
+int main() {
 
 
     // creatData();
 
-    char* fileString = "/root/wty/rawData.txt";
+    char* fileString = "/root/wty/data.txt";
     char* query = "/root/wty/query.txt";
     char* res = "/root/wty/result.txt";
+
 
     clock_t start1 = clock();
     dealData(fileString);
     printTime(start1,"数据读取");
 
-    clock_t start2 = clock();
-    secureCollaborationQ(query, res);
-    printTime(start2,"查询");
+    auto start_time = high_resolution_clock::now(); // 记录函数开始时间
 
-    readFile(res);
+    secureCollaborationQ(query, res);
+
+    auto end_time = high_resolution_clock::now(); // 记录函数结束时间
+    duration<double, milli> total_duration = end_time - start_time;
+    printf("查询的总时间是：%f 毫秒\n", total_duration.count());
+    fflush(stdout);
+
+    // 清理 rawData
+    cleanupRawData();
+
+    // cleanupRawData();
+    // cleanupRawData();
+    // cleanupRawData();
+    // cleanupRawData();
+    // cout << "-------------------------" << endl;
+    //
+    // clock_t start1 = clock();
+    // dealData(res);
+    // printTime(start1,"数据读取");
+    //
+    // clock_t start2 = clock();
+    // secureCollaborationQ(query, res);
+    // printTime(start2,"查询");
+    //
+    // readFile(res);
+    //
+    // // 清理 rawData
+    // cleanupRawData();
+    //
+    // cout << "-------------------------" << endl;
+    //
+    // start1 = clock();
+    // dealData(res);
+    // printTime(start1,"数据读取");
+    //
+    // start2 = clock();
+    // secureCollaborationQ(query, res);
+    // printTime(start2,"查询");
+    //
+    // readFile(res);
+    //
+    // start2 = clock();
+    // secureCollaborationQ(query, res);
+    // printTime(start2,"查询");
+    //
+    // readFile(res);
+    //
+    // // 清理 rawData
+    // cleanupRawData();
+    //
+    // cout << "-------------------------" << endl;
+    //
+    // start2 = clock();
+    // secureCollaborationQ(query, res);
+    // printTime(start2,"查询");
+    //
+    // readFile(res);
 
 
     return 0;

@@ -11,7 +11,12 @@
 #include <fstream>
 #include <queue>
 #include <openssl/bn.h>
-using namespace std;
+#include <thread>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <vector>
+#include <chrono>
+using namespace std::chrono;
 
 // 原始数据集
 vector<vector<vector<BIGNUM*>>> rawData;
@@ -117,9 +122,14 @@ vector<BIGNUM*> readBIGNUMsFromFile(char* filename, int lineNumber) {
 /**
  * @Method: 读取数据集
  * @param char* fileString 读取数据集的地址
+ * @return 状态码，1：成功；0：失败
  */
-void dealData(char* fileString) {
+int dealData(char* fileString) {
     vector<vector<BIGNUM*>> data = readBIGNUMsFromFile(fileString);
+
+    if (data.empty()) {
+        return 0;
+    }
 
     rawData.resize(numUsers);
 
@@ -139,33 +149,7 @@ void dealData(char* fileString) {
         }
         rawData[i] = t;
     }
-
-
-    // // 输出data
-    // cout << "Data: " << endl;
-    //
-    // for (int i = 0; i < data.size(); ++i) {
-    //     for (int j = 0; j < data[i].size(); ++j) {
-    //         cout << BN_bn2dec(data[i][j]) << " ";
-    //     }
-    //     cout << endl;
-    // }
-    // cout << "-------------" << endl;
-    //
-    // // 输出rawData
-    //
-    // for (int i = 0; i < rawData.size(); ++i) {
-    //     cout << "User " << i << ": " << endl;
-    //
-    //     for (int j = 0; j < rawData[i].size(); ++j) {
-    //         for (int k = 0; k < rawData[i][j].size(); ++k) {
-    //             cout << BN_bn2dec(rawData[i][j][k]) << " ";
-    //         }
-    //         cout << endl;
-    //     }
-    //     cout << endl;
-    // }
-
+    return 1;
 }
 
 /**
@@ -183,51 +167,128 @@ int secureCollaborationQ(char* fileString, char* resultFilePath) {
     // 将data_list[0][0]转化为int类型
     int k = static_cast<int>(BN_get_word(data_list[0][0]));
 
-    BIGNUM* distence = BN_CTX_get(CTX);
-    BIGNUM* temp = BN_CTX_get(CTX);
+    //------------------------------------------------------------------------------------------------
 
-    vector<priority_queue<HeapNode>> heapNodes(numUsers);
-    //将以下代码按照numUsers的值开启多进程进行计算
+    // BIGNUM* distence = BN_CTX_get(CTX);
+    // BIGNUM* temp = BN_CTX_get(CTX);
+    //
+    // vector<priority_queue<HeapNode>> heapNodes(numUsers);
+    //
+    // //将以下代码按照numUsers的值开启多进程进行计算
+    // for (int i = 0; i < numUsers; ++i) {
+    //
+    //     clock_t start = clock();
+    //
+    //     priority_queue<HeapNode> q;
+    //     // 维护每个用户的前k个最小距离
+    //     for (int j = 0; j < rawData[i].size(); ++j) {
+    //         BN_zero(distence);
+    //         for (int l = 0; l < rawData[i][j].size(); ++l) {
+    //             BN_sub(temp, data_list[1][l], rawData[i][j][l]);
+    //             BN_mul(temp, temp, temp, CTX);
+    //             BN_add(distence, distence, temp);
+    //         }
+    //         HeapNode node = {distence, i, j};
+    //         if (q.size() < k) {
+    //             q.push(node);
+    //         } else if (node < q.top()) {
+    //             q.pop();
+    //             q.push(node);
+    //         }
+    //     }
+    //
+    //     cout << "第" << i << "个用户计算k临近";
+    //     printTime(start,"");
+    //
+    //     heapNodes[i] = q;
+    // }
+
+
+
+    vector<int> pipes(numUsers * 2);
     for (int i = 0; i < numUsers; ++i) {
-
-        clock_t start = clock();
-
-        priority_queue<HeapNode> q;
-        // 维护每个用户的前k个最小距离
-        for (int j = 0; j < rawData[i].size(); ++j) {
-            BN_zero(distence);
-            for (int l = 0; l < rawData[i][j].size(); ++l) {
-                BN_sub(temp, data_list[1][l], rawData[i][j][l]);
-                BN_mul(temp, temp, temp, CTX);
-                BN_add(distence, distence, temp);
-            }
-            HeapNode node = {distence, i, j};
-            if (q.size() < k) {
-                q.push(node);
-            } else if (node < q.top()) {
-                q.pop();
-                q.push(node);
-            }
+        if (pipe(pipes.data() + i * 2) == -1) {
+            cerr << "Pipe creation failed" << endl;
+            return 0;
         }
-
-        cout << "第" << i << "个用户计算k临近";
-        printTime(start,"");
-
-        heapNodes[i] = q;
     }
 
-    // // 输出heapNodes
-    // for (int i = 0; i < heapNodes.size(); ++i) {
-    //     cout << "User " << i << ": " << endl;
-    //     while (!heapNodes[i].empty()) {
-    //         for (int l = 0; l < rawData[i][heapNodes[i].top().index2].size(); ++l) {
-    //             cout << BN_bn2dec(rawData[i][heapNodes[i].top().index2][l]) << " ";
-    //         }
-    //         cout << "index = " << heapNodes[i].top().index2 << endl;
-    //         heapNodes[i].pop();
-    //     }
-    //     cout << endl;
-    // }
+    for (int i = 0; i < numUsers; ++i) {
+        pid_t pid = fork();
+        if (pid < 0) {
+            cerr << "Fork failed" << endl;
+            return 0;
+        } else if (pid == 0) { // Child process
+            close(pipes[i * 2]); // Close reading end in child process
+            priority_queue<HeapNode> q;
+            BIGNUM* distence = BN_CTX_get(CTX);
+            BIGNUM* temp = BN_CTX_get(CTX);
+            for (int j = 0; j < rawData[i].size(); ++j) {
+                BN_zero(distence);
+                for (int l = 0; l < rawData[i][j].size(); ++l) {
+                    BN_sub(temp, data_list[1][l], rawData[i][j][l]);
+                    BN_mul(temp, temp, temp, CTX);
+                    BN_add(distence, distence, temp);
+                }
+                HeapNode node = {distence, i, j};
+                if (q.size() < k) {
+                    q.push(node);
+                } else if (node < q.top()) {
+                    q.pop();
+                    q.push(node);
+                }
+            }
+            int heapSize = q.size();
+            write(pipes[i * 2 + 1], &heapSize, sizeof(heapSize));
+            while (!q.empty()) {
+                HeapNode node = q.top();
+                q.pop();
+                int index1 = node.index1;
+                int index2 = node.index2;
+                char* distStr = BN_bn2dec(node.distence);
+                write(pipes[i * 2 + 1], &index1, sizeof(index1));
+                write(pipes[i * 2 + 1], &index2, sizeof(index2));
+                int distLen = strlen(distStr) + 1;
+                write(pipes[i * 2 + 1], &distLen, sizeof(distLen));
+                write(pipes[i * 2 + 1], distStr, distLen);
+                OPENSSL_free(distStr);
+            }
+            close(pipes[i * 2 + 1]); // Close writing end in child process
+            exit(0);
+        } else { // Parent process
+            close(pipes[i * 2 + 1]); // Close writing end in parent process
+        }
+    }
+
+    vector<priority_queue<HeapNode>> heapNodes(numUsers);
+    for (int i = 0; i < numUsers; ++i) {
+        int heapSize;
+        read(pipes[i * 2], &heapSize, sizeof(heapSize));
+        while (heapSize-- > 0) {
+            HeapNode node;
+            int index1, index2, distLen;
+            read(pipes[i * 2], &index1, sizeof(index1));
+            read(pipes[i * 2], &index2, sizeof(index2));
+            read(pipes[i * 2], &distLen, sizeof(distLen));
+            char* distStr = new char[distLen];
+            read(pipes[i * 2], distStr, distLen);
+            node.index1 = index1;
+            node.index2 = index2;
+            node.distence = BN_new();
+            BN_dec2bn(&node.distence, distStr);
+            delete[] distStr;
+            heapNodes[i].push(node);
+        }
+        close(pipes[i * 2]); // Close reading end in parent process
+    }
+
+    for (int i = 0; i < numUsers; ++i) {
+        wait(NULL); // Wait for all child processes to finish
+    }
+
+
+
+    //------------------------------------------------------------------------------------------------
 
     // 合并每个最大堆
     priority_queue<HeapNode> mergedHeap;
@@ -264,19 +325,32 @@ int secureCollaborationQ(char* fileString, char* resultFilePath) {
         return 0;
     }
 
+
+    // 释放 data_list 中的 BIGNUM 对象
+    for (auto& bn : data_list[0]) {
+        BN_free(bn);
+    }
+    for (auto& bn : data_list[1]) {
+        BN_free(bn);
+    }
     return 1;
+}
 
-    // while (!mergedHeap.empty()) {
-    //     cout << "User " << mergedHeap.top().index1 << ", index = " << mergedHeap.top().index2 << endl;
-    //     cout << "distence = " << BN_bn2dec(mergedHeap.top().distence) << endl;
-    //     mergedHeap.pop();
-    // }
-
-    // // 输出mergedHeap
-    // while (!mergedHeap.empty()) {
-    //     cout << "User " << mergedHeap.top().index1 << ", index = " << mergedHeap.top().index2 << endl;
-    //     cout << "distence = " << BN_bn2dec(mergedHeap.top().distence) << endl;
-    //     mergedHeap.pop();
-    // }
-
+/**
+ * @Method: 清理函数，用于释放 rawData 中的 BIGNUM 对象的内存
+ * @return 状态码，1：成功；0：失败
+ */
+int cleanupRawData() {
+    if (rawData.empty()) {
+        return 0;
+    }
+    for (auto& user : rawData) {
+        for (auto& vec : user) {
+            for (auto& bn : vec) {
+                BN_free(bn);
+            }
+        }
+    }
+    rawData.clear();
+    return 1;
 }
